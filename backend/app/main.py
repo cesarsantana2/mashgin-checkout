@@ -1,13 +1,12 @@
 from fastapi import FastAPI
 
 from app.api.routes.menu import router as menu_router
+from app.api.routes.orders import router as orders_router
 
-app = FastAPI(
-    title="Mashgin Checkout API",
-    version="0.1.0",
-)
+app = FastAPI(title="Mashgin Checkout API", version="0.1.0")
 
 app.include_router(menu_router, prefix="/api/v1")
+app.include_router(orders_router, prefix="/api/v1")
 
 
 @app.get("/health")

@@ -6,6 +6,7 @@ from alembic import context
 from app.db.base import Base
 from app.db.session import DATABASE_URL
 from app.models.menu import MenuItem  # noqa: F401
+from app.models.order import Order, OrderItem  # noqa: F401
 
 config = context.config
 
