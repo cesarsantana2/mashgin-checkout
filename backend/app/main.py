@@ -2,7 +2,6 @@ from fastapi import FastAPI
 
 from app.api.routes.menu import router as menu_router
 
-
 app = FastAPI(
     title="Mashgin Checkout API",
     version="0.1.0",

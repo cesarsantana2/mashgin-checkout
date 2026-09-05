@@ -1,39 +1,23 @@
-from fastapi import APIRouter
+from typing import Annotated
 
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.models.menu import MenuItem
 from app.schemas.menu import MenuItemResponse
-
 
 router = APIRouter(
     prefix="/menu",
     tags=["menu"],
 )
 
-
-MENU = [
-    MenuItemResponse(
-        id=1,
-        name="Chips",
-        description="Classic potato chips",
-        price_cents=199,
-        available=True,
-    ),
-    MenuItemResponse(
-        id=2,
-        name="Chocolate Bar",
-        description="Milk chocolate bar",
-        price_cents=249,
-        available=True,
-    ),
-    MenuItemResponse(
-        id=3,
-        name="Sparkling Water",
-        description="Cold sparkling water",
-        price_cents=179,
-        available=True,
-    ),
-]
+DbSession = Annotated[Session, Depends(get_db)]
 
 
 @router.get("", response_model=list[MenuItemResponse])
-def get_menu():
-    return MENU
+def get_menu(db: DbSession):
+    statement = select(MenuItem).order_by(MenuItem.id)
+
+    return db.scalars(statement).all()
