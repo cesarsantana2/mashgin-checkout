@@ -8,11 +8,19 @@ class Order(Base):
     __tablename__ = "orders"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    idempotency_key: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        unique=True,
+    )
+
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         default="completed",
     )
+
     total_cents: Mapped[int] = mapped_column(Integer, nullable=False)
 
     items: Mapped[list["OrderItem"]] = relationship(
