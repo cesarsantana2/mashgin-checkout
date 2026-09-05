@@ -1,7 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -15,6 +16,10 @@ router = APIRouter(
 )
 
 DbSession = Annotated[Session, Depends(get_db)]
+IdempotencyKey = Annotated[
+    str,
+    Header(alias="Idempotency-Key", min_length=1, max_length=64),
+]
 
 
 @router.post(
@@ -22,7 +27,18 @@ DbSession = Annotated[Session, Depends(get_db)]
     response_model=OrderResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_order(order_data: OrderCreate, db: DbSession):
+def create_order(
+    order_data: OrderCreate,
+    db: DbSession,
+    idempotency_key: IdempotencyKey,
+):
+    existing_order = db.scalar(
+        select(Order).where(Order.idempotency_key == idempotency_key)
+    )
+
+    if existing_order is not None:
+        return existing_order
+
     menu_item_ids = [item.menu_item_id for item in order_data.items]
 
     statement = select(MenuItem).where(MenuItem.id.in_(menu_item_ids))
@@ -60,13 +76,28 @@ def create_order(order_data: OrderCreate, db: DbSession):
         )
 
     order = Order(
+        idempotency_key=idempotency_key,
         status="completed",
         total_cents=total_cents,
         items=order_items,
     )
 
     db.add(order)
-    db.commit()
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+
+        existing_order = db.scalar(
+            select(Order).where(Order.idempotency_key == idempotency_key)
+        )
+
+        if existing_order is not None:
+            return existing_order
+
+        raise
+
     db.refresh(order)
 
     return order
